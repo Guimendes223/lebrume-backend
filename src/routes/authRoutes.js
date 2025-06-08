@@ -1,22 +1,13 @@
-// /home/ubuntu/lebrume_backend/src/routes/authRoutes.js
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, getMe } = require("../controllers/authController");
-const { protect } = require("../middlewares/authMiddleware");
+const { registerUser, loginUser, getCurrentUser } = require('../controllers/authController');
+const { protect } = require('../middleware/authMiddleware');
 
-// @route   POST /api/auth/register
-// @desc    Register a new user
-// @access  Public
-router.post("/register", registerUser);
+// Public routes
+router.post('/register', registerUser);
+router.post('/login', loginUser);
 
-// @route   POST /api/auth/login
-// @desc    Authenticate user & get token
-// @access  Public
-router.post("/login", loginUser);
-
-// @route   GET /api/auth/me
-// @desc    Get current user profile
-// @access  Private (requires token)
-router.get("/me", protect, getMe);
+// Protected routes
+router.get('/me', protect, getCurrentUser);
 
 module.exports = router;

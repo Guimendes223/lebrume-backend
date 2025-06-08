@@ -6,7 +6,7 @@ const {
   getCompanionStories,
   deleteStory,
 } = require("../controllers/storyController");
-const { protect, authorize } = require("../middlewares/authMiddleware");
+const { protect, authorize } = require("../middleware/authMiddleware");
 
 // @route   POST /api/stories
 // @desc    Create a new story for the authenticated companion

@@ -5,6 +5,7 @@ const db = require("./models"); // Imports models/index.js
 
 // Import routes here later
 const authRoutes = require("./routes/authRoutes");
+const adminRoutes=require('./routes/adminRoutes');
 // const userRoutes = require("./routes/userRoutes");
 const companionProfileRoutes = require("./routes/companionProfileRoutes");
 const storyRoutes = require("./routes/storyRoutes");
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 
 // API Routes (to be added)
 app.use("/api/auth", authRoutes);
+app.use('/api',adminRoutes)
 // app.use("/api/users", userRoutes);
 app.use("/api/companions", companionProfileRoutes);
 app.use("/api/stories", storyRoutes);

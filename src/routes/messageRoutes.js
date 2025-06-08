@@ -7,7 +7,7 @@ const {
   getMessagesWithPartner,
   markConversationAsRead,
 } = require("../controllers/messageController");
-const { protect } = require("../middlewares/authMiddleware");
+const { protect } = require("../middleware/authMiddleware");
 
 // All message routes are protected
 router.use(protect);

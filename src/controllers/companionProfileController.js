@@ -1,58 +1,57 @@
-// /home/ubuntu/lebrume_backend/src/controllers/companionProfileController.js
-const db = require("../models");
-const User = db.User;
-const CompanionProfile = db.CompanionProfile;
-const { Op } = require("sequelize");
+const { CompanionProfile, User, Service, Media } = require('../models');
+const { Op } = require('sequelize');
 
-// @desc    Get public companion profile by ID
-// @route   GET /api/companions/:id
+// @desc    Get companion profile by ID
+// @route   GET /api/companions/:id/profile
 // @access  Public
 const getCompanionProfileById = async (req, res, next) => {
   try {
-    const profile = await CompanionProfile.findByPk(req.params.id, {
+    const profile = await CompanionProfile.findOne({
+      where: { 
+        id: req.params.id,
+        isVisible: true // Only return visible profiles
+      },
       include: [
         {
           model: User,
           as: "user",
-          attributes: ["name", "emailVerified"], // Only include non-sensitive user data
+          attributes: ["name", "emailVerified"]
         },
-        // Add other includes later like Stories, Services, Ratings
-      ],
+        // Include other associations as needed
+      ]
     });
 
-    if (profile) {
-      // Check privacy settings before returning
-      // For now, assume all profiles fetched this way are public or the logic is handled elsewhere
-      res.json(profile);
-    } else {
-      res.status(404).json({ message: "Companion profile not found" });
+    if (!profile) {
+      return res.status(404).json({ message: "Companion profile not found" });
     }
+
+    res.json(profile);
   } catch (error) {
     console.error("Error fetching companion profile:", error);
     next(error);
   }
 };
 
-// @desc    Get current authenticated companion's own profile
+// @desc    Get current authenticated companion's profile
 // @route   GET /api/companions/me/profile
 // @access  Private (Companion role)
 const getMyCompanionProfile = async (req, res, next) => {
   try {
     const profile = await CompanionProfile.findOne({
-      where: { userId: req.user.id }, // req.user is set by protect middleware
+      where: { userId: req.user.id },
       include: [
         {
           model: User,
           as: "user",
-          attributes: { exclude: ["password"] },
+          attributes: ["name", "emailVerified"]
         },
-      ],
+        // Include other associations as needed
+      ]
     });
 
     if (profile) {
       res.json(profile);
     } else {
-      // If the user is a Companion but has no profile yet, they might need to create it.
       res.status(404).json({ message: "Companion profile not found for this user. Please create one." });
     }
   } catch (error) {
@@ -70,10 +69,10 @@ const upsertMyCompanionProfile = async (req, res, next) => {
     aboutMe, servicesSummary, ratesSummary, contactPhone, contactEmail,
     profilePictureUrl, privacySettings, availabilityStatus 
   } = req.body;
-
+  
   try {
     let profile = await CompanionProfile.findOne({ where: { userId: req.user.id } });
-
+    
     if (profile) {
       // Update existing profile
       profile.displayName = displayName || profile.displayName;
@@ -88,18 +87,27 @@ const upsertMyCompanionProfile = async (req, res, next) => {
       profile.profilePictureUrl = profilePictureUrl || profile.profilePictureUrl;
       profile.privacySettings = privacySettings || profile.privacySettings;
       profile.availabilityStatus = availabilityStatus || profile.availabilityStatus;
-      // Potentially update profileCompleteness based on fields filled
-
+      
+      // Profile completeness is calculated in the model hooks
       await profile.save();
-      res.json(profile);
+      
+      // Return updated profile with completeness information
+      res.json({
+        ...profile.toJSON(),
+        message: profile.isApproved 
+          ? "Profile updated successfully." 
+          : "Profile updated successfully. It will be visible in search after admin approval."
+      });
     } else {
       // Create new profile for the Companion user
       if (req.user.userType !== "Companion") {
         return res.status(403).json({ message: "Only users with Companion role can create a companion profile." });
       }
+      
       profile = await CompanionProfile.create({
         userId: req.user.id,
-        displayName,
+        name: req.user.name, // Use the user's name initially
+        displayName: displayName || req.user.name,
         locationCity,
         locationState,
         locationCountry,
@@ -111,9 +119,13 @@ const upsertMyCompanionProfile = async (req, res, next) => {
         profilePictureUrl,
         privacySettings,
         availabilityStatus,
-        profileCompleteness: 0, // Initial completeness
+        // isApproved and isVisible default to false
       });
-      res.status(201).json(profile);
+      
+      res.status(201).json({
+        ...profile.toJSON(),
+        message: "Profile created successfully. It will be visible in search after admin approval and completion."
+      });
     }
   } catch (error) {
     console.error("Error upserting companion profile:", error);
@@ -125,32 +137,43 @@ const upsertMyCompanionProfile = async (req, res, next) => {
 };
 
 // @desc    Search/Filter companion profiles
-// @route   GET /api/search/companions  (or /api/companions/search)
+// @route   GET /api/search/companions
 // @access  Public
 const searchCompanionProfiles = async (req, res, next) => {
     const { location, service_type, keywords, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
-
-    let whereClause = {};
+    
+    // Base where clause - only show approved and visible profiles
+    let whereClause = {
+        isApproved: true,
+        isVisible: true
+    };
+    
     let userWhereClause = {}; // For filtering by user properties if needed
-
+    
     if (location) {
-        // Simple location search (can be made more complex with city, state, country)
+        // Location search
         whereClause[Op.or] = [
             { locationCity: { [Op.iLike]: `%${location}%` } },
             { locationState: { [Op.iLike]: `%${location}%` } },
             { locationCountry: { [Op.iLike]: `%${location}%` } },
         ];
     }
+    
     if (keywords) {
-        whereClause[Op.or] = (
-            whereClause[Op.or] ? 
-            [...whereClause[Op.or], { displayName: { [Op.iLike]: `%${keywords}%` } }, { aboutMe: { [Op.iLike]: `%${keywords}%` } } ] :
-            [{ displayName: { [Op.iLike]: `%${keywords}%` } }, { aboutMe: { [Op.iLike]: `%${keywords}%` } } ]
-        );
+        // Keyword search in name and description
+        const keywordConditions = [
+            { displayName: { [Op.iLike]: `%${keywords}%` } },
+            { aboutMe: { [Op.iLike]: `%${keywords}%` } }
+        ];
+        
+        whereClause[Op.or] = whereClause[Op.or] 
+            ? [...whereClause[Op.or], ...keywordConditions]
+            : keywordConditions;
     }
+    
     // Add filtering by service_type later when Service model is fully integrated
-
+    
     try {
         const { count, rows } = await CompanionProfile.findAndCountAll({
             where: whereClause,
@@ -168,24 +191,101 @@ const searchCompanionProfiles = async (req, res, next) => {
             order: [["updatedAt", "DESC"]], // Example ordering
             distinct: true, // Important for counts with includes
         });
-
+        
         res.json({
             totalItems: count,
             totalPages: Math.ceil(count / limit),
             currentPage: parseInt(page),
             companions: rows,
         });
-
     } catch (error) {
         console.error("Error searching companion profiles:", error);
         next(error);
     }
 };
 
+// @desc    Admin: Get all companion profiles pending approval
+// @route   GET /api/admin/companions/pending
+// @access  Private (Admin role)
+const getPendingApprovalProfiles = async (req, res, next) => {
+    try {
+        // Ensure user is admin
+        if (req.user.userType !== "Admin") {
+            return res.status(403).json({ message: "Access denied. Admin privileges required." });
+        }
+        
+        const profiles = await CompanionProfile.findAll({
+            where: { 
+                isApproved: false,
+                profileCompleteness: { [Op.gte]: 70 } // Only show profiles that are complete enough for review
+            },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: ["name", "email", "emailVerified"]
+                }
+            ],
+            order: [["createdAt", "ASC"]] // Oldest first
+        });
+        
+        res.json(profiles);
+    } catch (error) {
+        console.error("Error fetching pending approval profiles:", error);
+        next(error);
+    }
+};
+
+// @desc    Admin: Approve or reject a companion profile
+// @route   PUT /api/admin/companions/:id/approval
+// @access  Private (Admin role)
+const approveRejectProfile = async (req, res, next) => {
+    const { approved, rejectionReason } = req.body;
+    
+    try {
+        // Ensure user is admin
+        if (req.user.userType !== "Admin") {
+            return res.status(403).json({ message: "Access denied. Admin privileges required." });
+        }
+        
+        const profile = await CompanionProfile.findByPk(req.params.id);
+        
+        if (!profile) {
+            return res.status(404).json({ message: "Companion profile not found" });
+        }
+        
+        if (approved) {
+            profile.isApproved = true;
+            profile.approvedAt = new Date();
+            profile.approvedBy = req.user.id;
+            profile.rejectionReason = null;
+            
+            // isVisible will be set in the beforeSave hook based on approval and completeness
+        } else {
+            profile.isApproved = false;
+            profile.approvedAt = null;
+            profile.approvedBy = null;
+            profile.rejectionReason = rejectionReason || "Profile rejected by admin.";
+            profile.isVisible = false;
+        }
+        
+        await profile.save();
+        
+        res.json({
+            message: approved ? "Profile approved successfully." : "Profile rejected.",
+            profile
+        });
+    } catch (error) {
+        console.error("Error approving/rejecting profile:", error);
+        next(error);
+    }
+};
 
 module.exports = {
   getCompanionProfileById,
   getMyCompanionProfile,
   upsertMyCompanionProfile,
   searchCompanionProfiles,
+  getPendingApprovalProfiles,
+  approveRejectProfile
 };

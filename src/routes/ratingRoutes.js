@@ -6,7 +6,7 @@ const {
   getCompanionRatings,
   deleteRating,
 } = require("../controllers/ratingController");
-const { protect, authorize } = require("../middlewares/authMiddleware");
+const { protect, authorize } = require("../middleware/authMiddleware");
 
 // @route   POST /api/ratings/companion/:companionProfileId
 // @desc    Create a new rating/review for a companion

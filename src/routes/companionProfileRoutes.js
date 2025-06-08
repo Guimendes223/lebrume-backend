@@ -1,33 +1,49 @@
-// /home/ubuntu/lebrume_backend/src/routes/companionProfileRoutes.js
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const {
-  getCompanionProfileById,
-  getMyCompanionProfile,
+
+const { 
+  getCompanionProfileById, 
+  getMyCompanionProfile, 
   upsertMyCompanionProfile,
-  searchCompanionProfiles // This might be better on a general /api/search route
-} = require("../controllers/companionProfileController");
-const { protect, authorize } = require("../middlewares/authMiddleware");
+  searchCompanionProfiles,
+  getPendingApprovalProfiles,
+  approveRejectProfile
+} = require('../controllers/companionProfileController');
 
-// @route   GET /api/companions/search
-// @desc    Search/Filter companion profiles
-// @access  Public
-// Note: The project plan also mentions GET /api/search/companions. We'll use this for now.
-router.get("/search", searchCompanionProfiles);
+const { protect } = require('../middleware/authMiddleware');
+const { isCompanion, isAdmin } = require('../middleware/roleMiddleware');
 
-// @route   GET /api/companions/me/profile
-// @desc    Get current authenticated companion's own profile
-// @access  Private (Companion role)
-router.get("/me/profile", protect, authorize("Companion"), getMyCompanionProfile);
+// Rotas públicas (não precisa de autenticação)
+router.get('/search/companions', (req, res, next) => {
+  console.log('GET /search/companions called');
+  next();
+}, searchCompanionProfiles);
 
-// @route   PUT /api/companions/me/profile
-// @desc    Create or Update current authenticated companion's profile
-// @access  Private (Companion role)
-router.put("/me/profile", protect, authorize("Companion"), upsertMyCompanionProfile);
+router.get('/companions/:id/profile', (req, res, next) => {
+  console.log(`GET /companions/${req.params.id}/profile called`);
+  next();
+}, getCompanionProfileById);
 
-// @route   GET /api/companions/:id
-// @desc    Get public companion profile by ID
-// @access  Public
-router.get("/:id", getCompanionProfileById);
+// Rotas protegidas para Companion
+router.get('/companions/me/profile', protect, isCompanion, (req, res, next) => {
+  console.log('GET /companions/me/profile called by user:', req.user.id);
+  next();
+}, getMyCompanionProfile);
+
+router.put('/companions/me/profile', protect, isCompanion, (req, res, next) => {
+  console.log('PUT /companions/me/profile called by user:', req.user.id);
+  next();
+}, upsertMyCompanionProfile);
+
+// Rotas protegidas para Admin
+router.get('/admin/companions/pending', protect, isAdmin, (req, res, next) => {
+  console.log('GET /admin/companions/pending called by admin:', req.user.id);
+  next();
+}, getPendingApprovalProfiles);
+
+router.put('/admin/companions/:id/approval', protect, isAdmin, (req, res, next) => {
+  console.log(`PUT /admin/companions/${req.params.id}/approval called by admin:`, req.user.id);
+  next();
+}, approveRejectProfile);
 
 module.exports = router;

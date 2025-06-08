@@ -7,7 +7,7 @@ const {
   getPendingVerifications,
   processVerificationRequest,
 } = require("../controllers/verificationController");
-const { protect, authorize } = require("../middlewares/authMiddleware");
+const { protect, authorize } = require("../middleware/authMiddleware");
 
 // Companion Routes
 // @route   POST /api/verification/submit/:step
