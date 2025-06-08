@@ -1,4 +1,4 @@
-require('dotenv').config(); // carrega as variáveis do .env local, se houver
+require('dotenv').config(); // Carrega variáveis do .env local (opcional)
 
 module.exports = {
   development: {
@@ -22,11 +22,5 @@ module.exports = {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: process.env.DB_DIALECT || 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    }
-  }
+  },
 };
