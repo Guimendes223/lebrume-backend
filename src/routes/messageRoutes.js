@@ -1,4 +1,3 @@
-// /home/ubuntu/lebrume_backend/src/routes/messageRoutes.js
 const express = require("express");
 const router = express.Router();
 const {
@@ -7,7 +6,7 @@ const {
   getMessagesWithPartner,
   markConversationAsRead,
 } = require("../controllers/messageController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, authorize } = require('../middleware/combinedMiddleware');
 
 // All message routes are protected
 router.use(protect);

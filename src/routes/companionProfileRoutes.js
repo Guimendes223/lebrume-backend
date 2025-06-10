@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-
 const { 
   getCompanionProfileById, 
   getMyCompanionProfile, 
@@ -10,40 +9,18 @@ const {
   approveRejectProfile
 } = require('../controllers/companionProfileController');
 
-const { protect } = require('../middleware/authMiddleware');
-const { isCompanion, isAdmin } = require('../middleware/roleMiddleware');
+const { protect, authorize } = require('../middleware/combinedMiddleware');
 
 // Rotas públicas (não precisa de autenticação)
-router.get('/search/companions', (req, res, next) => {
-  console.log('GET /search/companions called');
-  next();
-}, searchCompanionProfiles);
-
-router.get('/companions/:id/profile', (req, res, next) => {
-  console.log(`GET /companions/${req.params.id}/profile called`);
-  next();
-}, getCompanionProfileById);
+router.get('/search/companions', searchCompanionProfiles);
+router.get('/companions/:id/profile', getCompanionProfileById);
 
 // Rotas protegidas para Companion
-router.get('/companions/me/profile', protect, isCompanion, (req, res, next) => {
-  console.log('GET /companions/me/profile called by user:', req.user.id);
-  next();
-}, getMyCompanionProfile);
-
-router.put('/companions/me/profile', protect, isCompanion, (req, res, next) => {
-  console.log('PUT /companions/me/profile called by user:', req.user.id);
-  next();
-}, upsertMyCompanionProfile);
+router.get('/companions/me/profile', protect, authorize("Companion"), getMyCompanionProfile);
+router.put('/companions/me/profile', protect, authorize("Companion"), upsertMyCompanionProfile);
 
 // Rotas protegidas para Admin
-router.get('/admin/companions/pending', protect, isAdmin, (req, res, next) => {
-  console.log('GET /admin/companions/pending called by admin:', req.user.id);
-  next();
-}, getPendingApprovalProfiles);
-
-router.put('/admin/companions/:id/approval', protect, isAdmin, (req, res, next) => {
-  console.log(`PUT /admin/companions/${req.params.id}/approval called by admin:`, req.user.id);
-  next();
-}, approveRejectProfile);
+router.get('/admin/companions/pending', protect, authorize("Admin"), getPendingApprovalProfiles);
+router.put('/admin/companions/:id/approval', protect, authorize("Admin"), approveRejectProfile);
 
 module.exports = router;
