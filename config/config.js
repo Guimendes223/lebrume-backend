@@ -1,4 +1,3 @@
-```javascript
 require('dotenv').config();
 
 module.exports = {
@@ -32,4 +31,3 @@ module.exports = {
     logging: false,
   },
 };
-```
