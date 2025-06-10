@@ -1,4 +1,3 @@
-```javascript
 const authorizeRoles = (...allowedRoles) => (req, res, next) => {
   if (req.user && allowedRoles.includes(req.user.userType)) {
     return next();
@@ -12,4 +11,3 @@ module.exports = {
   isClient: authorizeRoles('Client'),
   authorizeRoles // exporta para usar diretamente se quiser
 };
-```
