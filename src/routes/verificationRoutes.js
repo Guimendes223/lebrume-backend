@@ -2,9 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   submitVerificationStep,
-  getVerificationStatus,
-  getVerificationRequests,
-  updateVerificationStatus
+  getVerificationStatus
 } = require("../controllers/verificationController");
 const { protect, authorize } = require('../middleware/combinedMiddleware');
 
@@ -23,9 +21,6 @@ router.get("/status", protect, authorize("Companion"), getVerificationStatus);
 // @access  Private (Admin role)
 router.get("/requests", protect, authorize("Admin"), (req, res) => {
   // Implementação temporária
-  if (typeof getVerificationRequests === 'function') {
-    return getVerificationRequests(req, res);
-  }
   res.json({ message: "Esta funcionalidade será implementada em breve", data: [] });
 });
 
@@ -34,9 +29,6 @@ router.get("/requests", protect, authorize("Admin"), (req, res) => {
 // @access  Private (Admin role)
 router.put("/:requestId/status", protect, authorize("Admin"), (req, res) => {
   // Implementação temporária
-  if (typeof updateVerificationStatus === 'function') {
-    return updateVerificationStatus(req, res);
-  }
   res.json({ message: "Esta funcionalidade será implementada em breve", success: true });
 });
 
