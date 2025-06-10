@@ -1,3 +1,4 @@
+```javascript
 require('dotenv').config();
 
 module.exports = {
@@ -7,6 +8,7 @@ module.exports = {
     database: process.env.DB_DATABASE || 'lebrume_dev_db',
     host: process.env.DB_HOST || '127.0.0.1',
     dialect: 'postgres',
+    logging: console.log,
   },
   test: {
     username: process.env.DB_USERNAME || 'postgres',
@@ -21,5 +23,13 @@ module.exports = {
     database: process.env.DB_DATABASE,
     host: process.env.DB_HOST,
     dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+    logging: false,
   },
 };
+```
