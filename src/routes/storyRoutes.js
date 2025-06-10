@@ -6,12 +6,13 @@ const {
   getCompanionStories,
   deleteStory,
 } = require("../controllers/storyController");
-const { protect, authorize } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/authMiddleware");
+const { authorizeRoles } = require("../middleware/roleMiddleware");
 
 // @route   POST /api/stories
 // @desc    Create a new story for the authenticated companion
 // @access  Private (Companion role)
-router.post("/", protect, authorize("Companion"), createStory);
+router.post("/", protect, authorizeRoles("Companion"), createStory);
 
 // @route   GET /api/stories/companion/:companionProfileId
 // @desc    Get active stories for a specific companion profile
@@ -21,6 +22,6 @@ router.get("/companion/:companionProfileId", getCompanionStories);
 // @route   DELETE /api/stories/:storyId
 // @desc    Delete a story owned by the authenticated companion
 // @access  Private (Companion role, owner)
-router.delete("/:storyId", protect, authorize("Companion"), deleteStory);
+router.delete("/:storyId", protect, authorizeRoles("Companion"), deleteStory);
 
 module.exports = router;
